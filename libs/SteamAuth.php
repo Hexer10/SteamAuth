@@ -97,11 +97,11 @@ class SteamAuth{
     }
 
     /**
-     * Generate info about a steam user.
+     * Get info about a steam user.
      *
      * @param $steamid64 mixed SteamID64 of the user.
      */
-    function createPlayer($steamid64){
+    function getPlayerSum($steamid64){
         $this->SSteamID = $steamid64;
         $this->updateData();
     }
