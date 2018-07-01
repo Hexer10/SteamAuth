@@ -212,9 +212,6 @@ class SteamAuth{
         $this->profileState = $player['profilestate']; //Profile configurated or not
         $this->lastLogoff = $player['lastlogoff']; //Last user online time
         $this->commentPerm = $player['commentpermission']; //Comment permission
-        echo $this->username;
-        echo "fuck";
-
 
         //Private data
         $this->realName =  isset($player['realname'])? $player['realname'] : ""; //User's realname
