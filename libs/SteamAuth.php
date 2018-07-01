@@ -249,7 +249,6 @@ class SteamAuth{
         $this->lastLogoff = '';
         $this->commentPerm = '';
 
-
         //Private data
         $this->realName = '';
         $this->primaryClan = '';
