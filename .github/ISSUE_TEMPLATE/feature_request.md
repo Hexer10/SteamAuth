@@ -4,11 +4,11 @@ about: Suggest an idea for this project
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**Describe the feature that you'd like to see in this class.**
+A clear and concise description of you suggestions. Ex. I'd like to add [...]
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**How would you implement this**
+A clear and concise description about how the feature should be implemented.
 
 **Describe alternatives you've considered**
 A clear and concise description of any alternative solutions or features you've considered.
