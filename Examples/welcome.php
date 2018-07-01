@@ -10,5 +10,5 @@ $auth->initOpenID('welcome.php', 'a random key');
 if (!$auth->isLogged()) {
     header('Location: login.php');
 } else {
-    echo 'Welcome '. $auth->getUsername() . PHP_EOL . 'You can click <a href="logout.php">here</a> to logout.' ;
+    echo 'Welcome '. $auth->username . PHP_EOL . 'You can click <a href="logout.php">here</a> to logout.' ;
 }
