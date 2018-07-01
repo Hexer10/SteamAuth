@@ -35,6 +35,9 @@ Now we can to two things:
  
  I sugged to check the [Examples](https://github.com/Hexer10/SteamAuth/tree/master/Examples) pages for more complex examples.
  
+ # Found bugs or features that would suit in this projects?
+ Request or reort it opening a new issue!
+
  # Todo
  * Add composer.
  * Add more steam api functions.
