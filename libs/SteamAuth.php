@@ -6,12 +6,42 @@ require "openid.php";
  *
  * It's properly tested only on PHP 7.2
  *
- * @version     v1.0 (2018-06-3)
+ * @version     v2.00 (2018-07-02)
  * @link        https://github.com/Hexer10/SteamAuth         GitHub Repo
  * @author      Mattia (Hexah/Hexer10) (hexer504@mail.com)
  * @copyright   Copyright (c) 2018 Mattia (Hexah/Hexer10) (hexer504@mail.com)
  * @license     http://opensource.org/licenses/mit-license.php  MIT License
  * @see         https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_.28v0002.29 API Documentaion
+ *
+ * @property-read mixed $steamid User's STEAMID64
+ * @property-read mixed $username User's Steam Displayname.
+ * @property-read mixed $profile User's profile URL.
+ * @property-read mixed $avatar User's avatar small (32x32)
+ * @property-read mixed $avatarm User's avatar medium (64x64)
+ * @property-read mixed $avatarf User's avatar full (184x184)
+ * @property-read mixed $personaState The user's current status. 0 - Offline or Private, 1 - Online, 2 - Busy, 3 - Away,
+ *                                    4 - Snooze, 5 - looking to trade, 6 - looking to play.
+ * @property-read mixed $visState Represents whether the profile is visible or not
+ * 								  1 - the profile is not visible to you (Private, Friends Only, etc),
+ * 								  3 - the profile is "Public", and the data is visible.
+ * @property-read mixed $profileState Indicates if the user has a community profile configured (1).
+ * @property-read mixed $lastLogoff The last time the user was online, in unix time.
+ * @property-read mixed $commentPerm Indicates if the profile allows public comments.
+ *
+ * @property-read mixed $realName Users's "Real Name", if it's set, otherwise ''.
+ * @property-read mixed $primaryClan User's primary clan ID, if it's set, otherwise 0.
+ * @property-read mixed $timeCreated User's account creation time, if it's public, otherwise 0.
+ * @property-read mixed $gameId Client User's playing game, or 0 if it's not playing/private.
+ * @property-read mixed $gameServerIP User's playing server IP:PORT or 0.0.0.0 .
+ * @property-read mixed $gameExtraInfo User's playing game, or '' if it's not playing/private.
+ * @property-read mixed $countryCode User's country of residence.
+ * @property-read mixed $stateCode User's state of residence.
+ * @property-read mixed $cityId User's city of residence.
+
+ * @property-read mixed $personaStateFlags This is not listed on the documentation.
+
+ * @property-read mixed $friends Associative array with the user's friends.
+ * @property-read mixed $playerInfo Associative array with all the user's information.
  */
 class SteamAuth{
 
@@ -53,13 +83,13 @@ class SteamAuth{
     //Additional data
     protected $friends;
 
+    //All data
     protected $playerInfo;
 
     //Encrypt Key
     private $secret_key;
     private $encrypt_method = "AES-256-CBC";
     private $key;
-
 
     /**
      * SteamAuth constructor.
@@ -77,7 +107,7 @@ class SteamAuth{
      * @param $ssl bool True to save a secure cookie, only compatible with HTTPs.
      * @throws ErrorException
      */
-    function initOpenID($loginURL, $secretKey, $cookieTime = '', $ssl = true){
+    function initOpenID($loginURL, $secretKey, $cookieTime = null, $ssl = true){
         $this->OpenID = new LightOpenID($_SERVER['SERVER_NAME']);
         $this->OpenID->identity = "https://steamcommunity.com/openid";
         $this->secret_key = $secretKey;
@@ -87,7 +117,6 @@ class SteamAuth{
         if (isset($_COOKIE['SteamSession'])){
             $this->SSteamID = $this->decryptSteamID($_COOKIE['SteamSession']);
         }
-
 
         if ($this->isLogged()) {
             $this->updateData();
@@ -106,7 +135,6 @@ class SteamAuth{
         $this->updateData();
     }
 
-
     /**
      * This operation should be considerate heavy, and be done only when strictly required.
      * @return string Login URL
@@ -115,6 +143,7 @@ class SteamAuth{
     function getLoginURL(){
         return $this->OpenID->authUrl();
     }
+    
     /**
      * Returns:
      * 0 -> The client need to login into steamcommunity.
@@ -189,6 +218,7 @@ class SteamAuth{
         }
         return true;
     }
+    
     /**
      * Update the user data from steam API
      * @noreturn
@@ -226,14 +256,15 @@ class SteamAuth{
 
         //Unknown
         $this->personaStateFlags = isset($player['personastateflags'])? $player['personastateflags'] : 0;
-
+        
         //Player friends
         $url = file_get_contents("https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=" .$this->APIkey. "&steamid=" .$this->SSteamID);
         $this->friends = json_decode($url, true);
-
+        
         $this->playerInfo['PlayerSummaries'] = $player;
         $this->playerInfo['Friends'] = $this->friends;
     }
+
 
     private function purgeData(){
         //Public data
@@ -248,7 +279,7 @@ class SteamAuth{
         $this->profileState = '';
         $this->lastLogoff = '';
         $this->commentPerm = '';
-
+        
         //Private data
         $this->realName = '';
         $this->primaryClan = '';
@@ -266,6 +297,7 @@ class SteamAuth{
         //Player friends
         $this->friends = '';
 
+        //All info
         $this->playerInfo = array();
     }
 
@@ -279,187 +311,20 @@ class SteamAuth{
         return openssl_decrypt(base64_decode($string), $this->encrypt_method, $this->key);
     }
 
-    /** GET PUBLIC DATA */
-
     /**
-     * 64bit SteamID of the user
-     * @return mixed SteamID64.
+     * @param $name mixed Property name.
+     * @return mixed Property value.
+     * @throws Exception
      */
-    function getSteamID(){
-        return $this->steamid;
-    }
+    public function __get($name) {
+        $rp = new ReflectionProperty($this, $name);
+        if ($rp->isPrivate())
+            die("Cannot access private property");
 
-    /**
-     * The player's persona name (display name)
-     * @return string Steam username.
-     */
-    function getUsername(){
-        return $this->username;
-    }
-
-    /**
-     * The full URL of the player's avatar.
-     * @param int $type Avatar type: 0 = Normal(32x32), 1 = Medium(64x64), 2 = Full(184x184).
-     * @return string Avatar URL.
-     */
-    function getAvatar($type = 0){
-        if ($type === 0){
-            return $this->avatar;
-        } elseif ($type === 1){
-            return $this->avatarm;
+        if (isset($this->$name)) {
+            return $this->$name;
         } else {
-            return $this->avatarf;
+            throw new Exception( "Call to nonexistent '$name' property of MyClass class" );
         }
-    }
-
-    /**
-     * The user's current status. 0 - Offline or Private, 1 - Online, 2 - Busy, 3 - Away,
-     *                            4 - Snooze, 5 - looking to trade, 6 - looking to play.
-     * @return int Personal state.
-     */
-    function getPersonaState(){
-        return $this->personaState;
-    }
-
-    /**
-     * This represents whether the profile is visible or not, and if it is visible, why you are allowed to see it.
-     * 1 - the profile is not visible to you (Private, Friends Only, etc),
-     * 3 - the profile is "Public", and the data is visible.
-     * @return int Visibility state.
-     */
-    function getVisibilityState(){
-        return $this->visState;
-    }
-
-    /**
-     * If set, indicates the user has a community profile configured (will be set to '1').
-     * @return int Profile state.
-     */
-    function getProfileState(){
-        return $this->profileState;
-    }
-
-
-    /**
-     * The last time the user was online, in unix time.
-     * @return int Last log off.
-     */
-    function getLastlogoff(){
-        return $this->lastLogoff;
-    }
-
-    /**
-     * If set, indicates the profile allows public comments.
-     * @return int Comment permission.
-     */
-    function getCommentPermission(){
-        return $this->commentPerm;
-    }
-
-
-    /** GET PRIVATE DATA */
-
-    /**
-     * The player's "Real Name", if they have set it.
-     * @return string Real name.
-     */
-    function getRealName(){
-        return $this->realName;
-    }
-
-    /**
-     * The player's primary group, as configured in their Steam Community profile.
-     * @return int Primary Clan ID.
-     */
-    function getPrimaryClan(){
-        return $this->primaryClan;
-    }
-
-    /**
-     * If the user is currently in-game, this value will be returned and set to the gameid of that game
-     * @return int Playing game id.
-     */
-    function getGameId(){
-        return $this->gameId;
-    }
-
-    /**
-     * The ip and port of the game server the user is currently playing on,
-     * if they are playing on-line in a game using Steam matchmaking. Otherwise will be set to "0.0.0.0:0".
-     * @return string Game server IP.
-     */
-    function getGameServerIP(){
-        return $this->gameServerIP;
-    }
-
-    /**
-     * If the user is currently in-game, this will be the name of the game they are playing.
-     * This may be the name of a non-Steam game shortcut.
-     * @return string Game name.
-     */
-    function getGameExtraInfo(){
-        return $this->gameExtraInfo;
-    }
-
-    /**
-     * The time the player's account was created.
-     * @return int Get timestamp of account creation.
-     */
-    function getTimeCreated(){
-        return $this->timeCreated;
-    }
-
-    /**
-     * If set on the user's Steam Community profile, The user's country of residence, 2-character ISO country code.
-     * @return int Country code.
-     */
-    function getCountryCode(){
-        return $this->countryCode;
-    }
-
-    /**
-     * If set on the user's Steam Community profile, The user's state of residence.
-     * @return int State code.
-     */
-    function getStateCode(){
-        return $this->stateCode;
-    }
-
-    /**
-     * An internal code indicating the user's city of residence
-     * @return int City id.
-     */
-    function getCityID(){
-        return $this->cityId;
-    }
-
-
-    //Unknown - Not listed on doc
-
-    /**
-     * @return int Personal state flags.
-     */
-    function getPersonaStateFlags(){
-        return $this->personaStateFlags;
-    }
-
-    /** ADDITIONAL PRIVATE DATA from other APIs */
-
-    /**
-     * Get an array filled with user's friend or a clear array if his profile is set to hide friends.
-     * @return array Friends array or clear if profile is private.
-     */
-    function getFriends(){
-        return $this->friends;
-    }
-
-
-    /**
-     * Get all info gathered from a user.
-     *
-     * @return array Array filled with the user data.
-     */
-    function getData(){
-        return $this->playerInfo;
     }
 }
