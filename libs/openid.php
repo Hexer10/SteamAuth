@@ -11,6 +11,9 @@
  * @author      Mewp <mewp151 at gmail dot com>
  * @copyright   Copyright (c) 2013 Mewp
  * @license     http://opensource.org/licenses/mit-license.php  MIT License
+ *
+ * @property $identity
+ * @property null mode
  */
 class LightOpenID
 {
