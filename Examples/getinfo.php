@@ -8,4 +8,4 @@ if (empty($_GET['steamid'])){
 $auth = new SteamAuth("APIKEY");
 
 $auth->getPlayerSum($_GET['steamid']);
-echo 'His name is '. $auth->getUsername();
+echo 'His name is '. $auth->usernam();
