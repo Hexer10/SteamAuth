@@ -1,7 +1,9 @@
 # SteamAuth
 Authenticated users using steam openid or gather users informations! 
 
-This requires openid.php
+You can find a full documentaion [here](https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_.28v0002.29) about the used API, a smaller doc about the properties & function it's on the class PHPDoc.
+
+This requires openid.php (Included in this repo.)
 
 # Usage
 
@@ -26,8 +28,8 @@ Now we can to two things:
  
  Finally we can get information about the user:
  ``` PHP
- echo $auth->getUsername(); //Get client display name.
- echo $auth->getRealname(); //Get client real name if specified.
+ echo $auth->username; //Get client display name.
+ echo $auth->realname; //Get client real name if specified.
  //And so on
  ```
  
