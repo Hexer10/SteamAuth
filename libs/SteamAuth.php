@@ -1,5 +1,5 @@
 <?php
-require "openid.php";
+require 'openid.php';
 
 /**
  * This class provides a simple usage of the steam openid.
@@ -88,14 +88,14 @@ class SteamAuth{
 
     //Encrypt Key
     private $secret_key;
-    private $encrypt_method = "AES-256-CBC";
+    private $encrypt_method = 'AES-256-CBC';
     private $key;
 
     /**
      * SteamAuth constructor.
      * @param $apikey int Steam APIKey
      */
-    function __construct($apikey){
+    public function __construct($apikey){
         $this->APIkey = $apikey;
     }
 
@@ -107,11 +107,12 @@ class SteamAuth{
      * @param $ssl bool True to save a secure cookie, only compatible with HTTPs.
      * @throws ErrorException
      */
-    function initOpenID($loginURL, $secretKey, $cookieTime = null, $ssl = true){
+    public function initOpenID($loginURL, $secretKey, $cookieTime = null, $ssl = true): void{
         $this->OpenID = new LightOpenID($_SERVER['SERVER_NAME']);
-        $this->OpenID->identity = "https://steamcommunity.com/openid";
+        $this->OpenID->identity = 'https://steamcommunity.com/openid';
         $this->secret_key = $secretKey;
-        $this->expire = empty($cookieTime)? time() + (10 * 365 * 24 * 60 * 60) : $cookieTime;
+        /** @noinspection SummerTimeUnsafeTimeManipulationInspection */
+        $this->expire = $cookieTime ?? time() + (10 * 365 * 24 * 60 * 60);
         $this->useSSL = $ssl;
         $this->key = hash('sha256', $this->secret_key);
         if (isset($_COOKIE['SteamSession'])){
@@ -130,7 +131,8 @@ class SteamAuth{
      *
      * @param $steamid64 mixed SteamID64 of the user.
      */
-    function getPlayerSum($steamid64){
+    public function getPlayerSum($steamid64): void
+    {
         $this->SSteamID = $steamid64;
         $this->updateData();
     }
@@ -140,10 +142,11 @@ class SteamAuth{
      * @return string Login URL
      * @throws ErrorException
      */
-    function getLoginURL(){
+    public function getLoginURL(): string
+    {
         return $this->OpenID->authUrl();
     }
-    
+
     /**
      * Returns:
      * 0 -> The client need to login into steamcommunity.
@@ -152,7 +155,8 @@ class SteamAuth{
      * -1 -> The login was aborted.
      * @return int;
      */
-    private function getLoginState(){
+    private function getLoginState(): ?int
+    {
         if (!empty($this->SSteamID)){
             return 2;
         }
@@ -160,11 +164,12 @@ class SteamAuth{
         $mode = $this->OpenID->mode;
         if (!$mode) {
             return 0;
-        } elseif ($mode === "cancel") {
-            return -1;
-        } else {
-            return 1;
         }
+
+        if ($mode === 'cancel') {
+            return -1;
+        }
+        return 1;
     }
 
 
@@ -175,28 +180,29 @@ class SteamAuth{
      * @throws ErrorException
      *
      */
-    private function validateLogin($url){
+    private function validateLogin($url): ?bool
+    {
         if ($this->OpenID->validate()) {
             $id = $this->OpenID->identity;
-            $ptn = "/^https?:\/\/steamcommunity\.com\/openid\/id\/(7[0-9]{15,25}+)$/";
+            $ptn = '/^https?:\/\/steamcommunity\.com\/openid\/id\/(7\d{15,25}+)$/';
             preg_match($ptn, $id, $matches);
 
-            setcookie("SteamSession", $this->encryptSteamID($matches[1]), $this->expire, "/", $_SERVER['SERVER_NAME'], $this->useSSL, true);
+            setcookie('SteamSession', $this->encryptSteamID($matches[1]), $this->expire, '/', $_SERVER['SERVER_NAME'], $this->useSSL, true);
             $this->SSteamID = $matches[1];
 
             $this->updateData();
-            header("Location: " .$url);
+            header('Location: ' .$url);
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
     /**
      * Returns if a client is logged with steam or not.
      * @return bool True if the user is logged, false otherwise
      */
-    function isLogged(){
+    public function isLogged(): bool
+    {
         return !empty($this->SSteamID);
     }
 
@@ -205,28 +211,31 @@ class SteamAuth{
      * @param string $logoutURL Where to redirect after logout. If empty no redirect will happen.
      * @return bool False if the logout fail (user not logged in), true otherwise.
      */
-    function logout($logoutURL = ""){
+    public function logout($logoutURL = ''): bool
+    {
         if (empty($this->SSteamID)){
             return false;
-        } else {
-            setcookie("SteamSession", "", time() - 3600, "/", $_SERVER['SERVER_NAME'], $this->useSSL, true);
-            $this->SSteamID = "";
-            $this->purgeData();
         }
+
+        setcookie('SteamSession', '', time() - 3600, '/', $_SERVER['SERVER_NAME'], $this->useSSL, true);
+        $this->SSteamID = '';
+        $this->purgeData();
+
         if (!empty($logoutURL)){
-            header("Location: " .$logoutURL);
+            header('Location: ' .$logoutURL);
         }
         return true;
     }
-    
+
     /**
      * Update the user data from steam API
      * @noreturn
      */
-    function updateData(){
+    public function updateData(): void
+    {
 
         //Player sum
-        $url = file_get_contents("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=" .$this->APIkey. "&steamids=" .$this->SSteamID);
+        $url = file_get_contents('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=' .$this->APIkey. '&steamids=' .$this->SSteamID);
         $data = json_decode($url, true);
         $player = $data['response']['players'][0];
 
@@ -244,29 +253,30 @@ class SteamAuth{
         $this->commentPerm = $player['commentpermission']; //Comment permission
 
         //Private data
-        $this->realName =  isset($player['realname'])? $player['realname'] : ""; //User's realname
-        $this->primaryClan = isset($player['primaryclanid'])? $player['primaryclanid'] : 0; //User's primary clan id
-        $this->timeCreated = isset($player['timecreated'])? $player['timecreated'] : 0; //Account creation time
-        $this->gameId = isset($player['gameid'])? $player['gameid'] : 0; //Playing game id
-        $this->gameServerIP = isset($player['gameserverip'])? $player['gameserverip'] : "0.0.0.0"; //Playing server ip
-        $this->gameExtraInfo = isset($player['gameextrainfo'])? $player['gameextrainfo'] : ""; //Playing game name
-        $this->countryCode = isset($player['loccountrycode'])? $player['loccountrycode'] : 0; //Country of residence code
-        $this->stateCode = isset($player['locstatecode'])? $player['locstatecode'] : 0; //State of residence code
-        $this->cityId = isset($player['loccityid'])? $player['loccityid'] : 0; //City of residence id
+        $this->realName = $player['realname'] ?? ''; //User's realname
+        $this->primaryClan = $player['primaryclanid'] ?? 0; //User's primary clan id
+        $this->timeCreated = $player['timecreated'] ?? 0; //Account creation time
+        $this->gameId = $player['gameid'] ?? 0; //Playing game id
+        $this->gameServerIP = $player['gameserverip'] ?? '0.0.0.0'; //Playing server ip
+        $this->gameExtraInfo = $player['gameextrainfo'] ?? ''; //Playing game name
+        $this->countryCode = $player['loccountrycode'] ?? 0; //Country of residence code
+        $this->stateCode = $player['locstatecode'] ?? 0; //State of residence code
+        $this->cityId = $player['loccityid'] ?? 0; //City of residence id
 
         //Unknown
-        $this->personaStateFlags = isset($player['personastateflags'])? $player['personastateflags'] : 0;
-        
+        $this->personaStateFlags = $player['personastateflags'] ?? 0;
+
         //Player friends
-        $url = file_get_contents("https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=" .$this->APIkey. "&steamid=" .$this->SSteamID);
+        $url = file_get_contents('https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=' .$this->APIkey. '&steamid=' .$this->SSteamID);
         $this->friends = json_decode($url, true);
-        
+
         $this->playerInfo['PlayerSummaries'] = $player;
         $this->playerInfo['Friends'] = $this->friends;
     }
 
 
-    private function purgeData(){
+    private function purgeData(): void
+    {
         //Public data
         $this->steamid = '';
         $this->username = '';
@@ -279,7 +289,7 @@ class SteamAuth{
         $this->profileState = '';
         $this->lastLogoff = '';
         $this->commentPerm = '';
-        
+
         //Private data
         $this->realName = '';
         $this->primaryClan = '';
@@ -302,14 +312,18 @@ class SteamAuth{
     }
 
     //Encrypt data
-    private function encryptSteamID($string){
+    private function encryptSteamID($string): string
+    {
         return base64_encode(openssl_encrypt($string, $this->encrypt_method, $this->key));
     }
 
     //Decrypt data
-    private function decryptSteamID($string){
+    private function decryptSteamID($string): string
+    {
         return openssl_decrypt(base64_decode($string), $this->encrypt_method, $this->key);
     }
+
+    /** @noinspection MagicMethodsValidityInspection */
 
     /**
      * @param $name mixed Property name.
@@ -318,13 +332,14 @@ class SteamAuth{
      */
     public function __get($name) {
         $rp = new ReflectionProperty($this, $name);
-        if ($rp->isPrivate())
-            die("Cannot access private property");
+        if ($rp->isPrivate()) {
+            throw new RuntimeException( 'Cannot $asd access private property: ');
+        }
 
         if (isset($this->$name)) {
             return $this->$name;
-        } else {
-            throw new Exception( "Call to nonexistent '$name' property of MyClass class" );
         }
+
+        throw new RuntimeException( "Call to nonexistent '$name' property of MyClass class" );
     }
 }
